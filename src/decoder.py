@@ -467,6 +467,43 @@ class HDFCBkTransactionSMSDecoder(TransactionSMSDecoder):
     ]
 
 
+class SBYONOTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+class HDFCBNTransactionSMSDecoder(TransactionSMSDecoder):
+    illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + [
+        "interest rate"
+    ]
+
+
+class SBIUpiTransactionSMSDecoder(TransactionSMSDecoder):
+    patterns = {
+        "debit": [
+            {
+                "pattern": r"([a-z\d\., ]+) debited(@|!)sbi upi frm a\/c ?([x\d]+) on ([a-z\d]+) refno ([\d]+)\..*",
+                "attributes": {"amount": 0, "sender": 2, "date": 3, "ref_no": 4},
+            },
+            {
+                "pattern": r"dear sbi user, your a\/c ([x\d]+) ?- ?debited by ([a-z\d\., ]+) on ([a-z\d]+) transfer to ([a-z\d\W ]+) ref no ([\d]+)\..*",
+                "attributes": {
+                    "sender": 0,
+                    "amount": 1,
+                    "date": 2,
+                    "receiver": 3,
+                    "ref_no": 4,
+                },
+            },
+        ],
+        "credit": [
+            {
+                "pattern": r"dear sbi upi user, your a\/c ?([x\d]+) credited (by|with) ([a-z\d\., ]+) on ([a-z\d]+) .*\(ref no ([\d]+)\)",
+                "attributes": {"receiver": 0, "amount": 2, "date": 3, "ref_no": 4},
+            }
+        ],
+    }
+
+
 decoders = {
     "paytmb": PaytmTransactionSMSDecoder(),
     "icicib": IcicibTransactionSMSDecoder(),
@@ -479,6 +516,9 @@ decoders = {
     "axisbk": AxisBkTransactionSMSDecoder(),
     "rbisay": RBISayTransactionSMSDecoder(),
     "hdfcbk": HDFCBkTransactionSMSDecoder(),
+    "sbyono": SBYONOTransactionSMSDecoder(),
+    "hdfcbn": HDFCBNTransactionSMSDecoder(),
+    "sbiupi": SBIUpiTransactionSMSDecoder(),
 }
 
 
@@ -526,7 +566,7 @@ def decode_smses(smses: List[SMS]):
 
 
 def preprocess(s: str) -> str:
-    return s.lower().replace("\n", "")
+    return s.lower().replace("\n", "").replace(" ur ", " your ")
 
 
 def main():
