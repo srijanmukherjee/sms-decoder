@@ -697,7 +697,24 @@ class SBGMBSTransactionSMSDecoder(TransactionSMSDecoder):
 
 
 class PNBSmsTransactionSMSDecoder(TransactionSMSDecoder):
-    pass
+    patterns = {
+        "credit": [
+            {
+                "pattern": r".*a\/?c ([x\d]+) credited with ([a-z\d\., ]+) ?, ?([\d\- :]+)\..*",
+                "attributes": {"receiver": 0, "amount": 1, "date": 2},
+            },
+            {
+                "pattern": r".*a\/?c.* ([x\d]+) .* credited (for|by) ([a-z\d\., ]+) on ([\d\- :\.]+) .* \(.* ref (no|id) ([\d]+)\).*",
+                "attributes": {"receiver": 0, "amount": 2, "date": 3, "ref_no": 5},
+            },
+        ],
+        "debit": [
+            {
+                "pattern": r".*a\/?c.* ([x\d]+) is debited (for|by) ([a-z\d\., ]+) on ([\d\- :\.]+) .* \(.* ref (no|id) ([\d]+) *\).*",
+                "attributes": {"sender": 0, "amount": 2, "date": 3, "ref_no": 5},
+            },
+        ],
+    }
 
 
 decoders: Dict[str, TransactionSMSDecoder] = {
