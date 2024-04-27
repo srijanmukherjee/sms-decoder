@@ -663,6 +663,43 @@ class UnionbTransactionSMSDecoder(TransactionSMSDecoder):
     }
 
 
+class IDFCFbTransactionSMSDecoder(TransactionSMSDecoder):
+    debit_keywords = TransactionSMSDecoder.debit_keywords + ["towards your loan"]
+    illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + [
+        "start a new income stream",
+        "will be",
+    ]
+
+    patterns = {
+        "debit": [
+            {
+                "pattern": r"received ([a-z\d\. ,]+) by cash on ([\d\/]+) vide ereceipt number ([a-z\d]+) towards your loan a\/c no\. ([x\d]+)\..*",
+                "attributes": {"amount": 0, "date": 1, "ref_no": 2, "receiver": 3},
+            }
+        ]
+    }
+
+
+class ICIBnkTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+class AXISMRTranasctionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+class SBICmpTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+class SBGMBSTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+class PNBSmsTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
 decoders: Dict[str, TransactionSMSDecoder] = {
     "paytmb": PaytmTransactionSMSDecoder(),
     "icicib": IcicibTransactionSMSDecoder(),
@@ -685,6 +722,12 @@ decoders: Dict[str, TransactionSMSDecoder] = {
     "psbank": PSBankTransactionSMSDecoder(),
     "airbnk": AIRBnkTransactionSMSDecoder(),
     "unionb": UnionbTransactionSMSDecoder(),
+    "idfcfb": IDFCFbTransactionSMSDecoder(),
+    "icibnk": ICIBnkTransactionSMSDecoder(),
+    "axismr": AXISMRTranasctionSMSDecoder(),
+    "sbicmp": SBICmpTransactionSMSDecoder(),
+    "sbgmbs": SBGMBSTransactionSMSDecoder(),
+    "pnbsms": PNBSmsTransactionSMSDecoder(),
 }
 
 
