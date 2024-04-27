@@ -22,12 +22,13 @@ class TransactionSMSDecoder(abc.ABC):
 
     patterns = {}
     debit_keywords = ["debited", "automatic payment of", " dr ", "withdrawn"]
-    credit_keywords = ["received", "credited", " cr "]
+    credit_keywords = ["received", "credited", " cr ", "deposited"]
     legal_tnx_keywords = [
         "received",
         "debited",
         "credited",
         "withdrawn",
+        "deposited",
         " cr ",
         " dr ",
     ]
@@ -115,6 +116,10 @@ class PaytmTransactionSMSDecoder(TransactionSMSDecoder):
             {
                 "pattern": r"([a-z\d\.]+) received from ([a-z\d ]+) in your paytm payments bank a/c ([a-z\d]+)\. upi ref: ([\d]+) avl bal: [a-z\d\.]+\. :ppbl",
                 "attributes": {"amount": 0, "sender": 1, "receiver": 2, "ref_no": 3},
+            },
+            {
+                "pattern": r"([a-z \d\.,]+) deposited in your paytm wallet linked with mobile no .*",
+                "attributes": {"amount": 0},
             },
         ],
     }
@@ -374,6 +379,94 @@ class AtmSBITransactionSMSDecoder(TransactionSMSDecoder):
     ]
 
 
+class SPRCRDTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+class SBIDGTTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+class AxisBkTransactionSMSDecoder(TransactionSMSDecoder):
+    illegal_tnx_keywords = ["requested"]
+
+
+class RBISayTransactionSMSDecoder(TransactionSMSDecoder):
+    illegal_tnx_keywords = ["failed digital transaction"]
+
+
+class HDFCBkTransactionSMSDecoder(TransactionSMSDecoder):
+    patterns = {
+        "credit": [
+            {
+                "pattern": r"update: your a\/c ([x\d]+) credited with ([a-z\d \.,]+) on ([\d\-\/a-z]+) by a/c linked to mobile no .+ \(imps ref no. ([a-z\d]+)\).*",
+                "attributes": {"receiver": 0, "amount": 1, "date": 2, "ref_no": 3},
+            },
+            {
+                "pattern": r"update(:|!) ([a-z\d \.,]+) deposited in( hdfc bank)? a\/c ([x\d]+) on ([\d\-\/a-z]+) for .*",
+                "attributes": {"amount": 1, "receiver": 3, "date": 4},
+            },
+            {
+                "pattern": r"hdfc bank: ([a-z \d\.,]+) credited to a\/c ([x\*\d]+) on ([a-z\d\- :]+) by a\/c linked to vpa ([a-z\W\d ]+) \(upi ref no  ([\d]+)\)\.",
+                "attributes": {
+                    "amount": 0,
+                    "receiver": 1,
+                    "date": 2,
+                    "sender": 3,
+                    "ref_no": 4,
+                },
+            },
+            {
+                "pattern": r"alert: a\/c ([x\d]+) credited with ([a-z \d\.,]+) on ([a-z\d\/\.]+) at .*",
+                "attributes": {"amount": 1, "receiver": 0, "date": 2},
+            },
+            {
+                "pattern": r"received  ?hdfc bank upi payment:([a-z\d\., ]+) from ([a-z\W \d]+) on ([\d:\- \/]+)\|transaction id:([\d]+)\..*",
+                "attributes": {"amount": 0, "sender": 1, "date": 2, "ref_no": 3},
+            },
+        ],
+        "debit": [
+            {
+                "pattern": r"hdfc bank: ([a-z \d\.,]+) debited from a\/c ([x\*\d]+) on ([\d\-\/a-z]+) to (vpa|a\/c) ([a-z\W\d\* ]+) ?\(upi ref no\.? ([\d]+)\)\..*",
+                "attributes": {
+                    "amount": 0,
+                    "sender": 1,
+                    "receiver": 4,
+                    "date": 2,
+                    "ref_no": 5,
+                },
+            },
+            {
+                "pattern": r"update: ([a-z\d\., ]+) debited from hdfc bank ([x\d]+) on ([a-z\d\-\/]+)\..*",
+                "attributes": {"amount": 0, "sender": 1, "date": 2},
+            },
+            {
+                "pattern": r"update: ([a-z ,\.\d]+) debited from a\/c ([x\d]+) on ([a-z\d\-\/]+)\..*",
+                "attributes": {"amount": 0, "sender": 1, "date": 2},
+            },
+            {
+                "pattern": r"alert:you've withdrawn ([a-z\d\., ]+) via debit card ([x\d]+) at ([a-z\W\d ]+) on ([\d\-:]+)\..*",
+                "attributes": {"amount": 0, "sender": 1, "receiver": 2, "date": 3},
+            },
+            {
+                "pattern": r"([a-z\d\., ]+) debited from a\/c ([x\*\d]+) on ([\d\-\/]+) to vpa ([a-z\W\d ]+) ?\(upi ref no\.? ([\d]+)\)\..*",
+                "attributes": {
+                    "amount": 0,
+                    "sender": 1,
+                    "date": 2,
+                    "receiver": 3,
+                    "ref_no": 4,
+                },
+            },
+        ],
+    }
+
+    illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + [
+        "request",
+        "delivered",
+    ]
+
+
 decoders = {
     "paytmb": PaytmTransactionSMSDecoder(),
     "icicib": IcicibTransactionSMSDecoder(),
@@ -381,6 +474,11 @@ decoders = {
     "indbnk": IndbnkTransactionSMSDecoder(),
     "sbiinb": SBIInbTransactionSMSDecoder(),
     "atmsbi": AtmSBITransactionSMSDecoder(),
+    "sprcrd": SPRCRDTransactionSMSDecoder(),
+    "sbidgt": SBIDGTTransactionSMSDecoder(),
+    "axisbk": AxisBkTransactionSMSDecoder(),
+    "rbisay": RBISayTransactionSMSDecoder(),
+    "hdfcbk": HDFCBkTransactionSMSDecoder(),
 }
 
 
@@ -428,7 +526,7 @@ def decode_smses(smses: List[SMS]):
 
 
 def preprocess(s: str) -> str:
-    return s.lower()
+    return s.lower().replace("\n", "")
 
 
 def main():
