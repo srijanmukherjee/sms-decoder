@@ -421,7 +421,7 @@ class HDFCBkTransactionSMSDecoder(TransactionSMSDecoder):
                 "attributes": {"amount": 1, "receiver": 0, "date": 2},
             },
             {
-                "pattern": r"received  ?hdfc bank upi payment:([a-z\d\., ]+) from ([a-z\W \d]+) on ([\d:\- \/]+)\|transaction id:([\d]+)\..*",
+                "pattern": r"received  *hdfc bank upi payment:([a-z\d\., ]+) from ([a-z\W \d]+) on ([\d:\- \/]+)\|transaction id:([\d]+)\..*",
                 "attributes": {"amount": 0, "sender": 1, "date": 2, "ref_no": 3},
             },
         ],
@@ -504,7 +504,62 @@ class SBIUpiTransactionSMSDecoder(TransactionSMSDecoder):
     }
 
 
-decoders = {
+class SBIPsgTransactionSMSDecoder(TransactionSMSDecoder):
+    patterns = {
+        "credit": [
+            {
+                "pattern": r"dear customer, ([a-z \d\.,]+) credited to your a\/c no ([x\d]+) on ([\d\/]+).*",
+                "attributes": {"amount": 0, "receiver": 1, "date": 2},
+            }
+        ]
+    }
+
+    illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + [
+        "avail bal in a/c"
+    ]
+
+
+class CBSSBITransactionSMSDecoder(TransactionSMSDecoder):
+    patterns = {
+        "credit": [
+            {
+                "pattern": r"your a\/?c ([x\d]+) credited ([a-z\d\., ]+) on ([\d\/]+).*",
+                "attributes": {"receiver": 0, "amount": 1, "date": 2},
+            },
+            {
+                "pattern": r"dear customer, .+ of ([a-z\d\., ]+) has been credited to your a\/?c no\. ?([x\d]+) on ([\d\/]+).*",
+                "attributes": {"amount": 0, "receiver": 1, "date": 2},
+            },
+        ],
+        "debit": [
+            {
+                "pattern": r"your a\/?c ([x\d]+) debited ([a-z\d\., ]+) on ([\d\/]+).*",
+                "attributes": {"sender": 0, "amount": 1, "date": 2},
+            }
+        ],
+    }
+
+    illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + ["request"]
+
+
+class HDFCLITransactionSMSDecoder(TransactionSMSDecoder):
+    debit_keywords = TransactionSMSDecoder.debit_keywords + ["we have received"]
+
+    patterns = {
+        "debit": [
+            {
+                "pattern": r"thank you! we have received your payment of ([a-z\d\., ]+) for .+ on ([\d\/]+).*",
+                "attributes": {"amount": 0, "date": 1},
+            }
+        ]
+    }
+
+
+class SBIOtpTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+decoders: Dict[str, TransactionSMSDecoder] = {
     "paytmb": PaytmTransactionSMSDecoder(),
     "icicib": IcicibTransactionSMSDecoder(),
     "kotakb": KotakbTransactionSMSDecoder(),
@@ -519,6 +574,10 @@ decoders = {
     "sbyono": SBYONOTransactionSMSDecoder(),
     "hdfcbn": HDFCBNTransactionSMSDecoder(),
     "sbiupi": SBIUpiTransactionSMSDecoder(),
+    "sbipsg": SBIPsgTransactionSMSDecoder(),
+    "cbssbi": CBSSBITransactionSMSDecoder(),
+    "hdfcli": HDFCLITransactionSMSDecoder(),
+    "sbiotp": SBIOtpTransactionSMSDecoder(),
 }
 
 
@@ -566,7 +625,7 @@ def decode_smses(smses: List[SMS]):
 
 
 def preprocess(s: str) -> str:
-    return s.lower().replace("\n", "").replace(" ur ", " your ")
+    return s.lower().replace("\n", " ").replace(" ur ", " your ")
 
 
 def main():
