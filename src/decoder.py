@@ -566,7 +566,101 @@ class SBIOtpTransactionSMSDecoder(TransactionSMSDecoder):
 
 
 class PSBankTransactionSMSDecoder(TransactionSMSDecoder):
-    pass
+    patterns = {
+        "debit": [
+            {
+                "pattern": r"([a-z \d\.,]+) debited from a\/c ([\*x\d]+).*([\d\- :]+)\..*",
+                "attributes": {"amount": 0, "sender": 1, "date": 2},
+            },
+            {
+                "pattern": r".*a\/c no ([\*x\d]+) debited *.*with ([a-z \d\.,]+)--.*\(([\d\- :]+)\).*",
+                "attributes": {
+                    "receiver": 0,
+                    "amount": 1,
+                    "date": 2,
+                },
+            },
+            {
+                "pattern": r"rtgs transaction with reference number ([a-z\d]+) for ([a-z\d\., ]+) *has been credited on ([a-z\d:\-]+) *to beneficiary.*",
+                "attributes": {"ref_no": 0, "amount": 1, "date": 2},
+            },
+            {
+                "pattern": r".*vpa ([a-z\d\W ]+) linked to .* a\/c no\. ([x\d]+) is debited for ([a-z\d\., ]+) and credited to ([a-z\d\W ]+) \(upi ref no ([\d]+)\).*",
+                "attributes": {"sender": 1, "amount": 2, "receiver": 3, "ref_no": 4},
+            },
+            {
+                "pattern": r"your a\/c no\. ([a-z\d]+) is debited for ([a-z\d\., ]+) on ([\d\-]+) and credited to a\/c no\. ([a-z\d]+) \(upi ref no ([\d]+)\).*",
+                "attributes": {
+                    "sender": 0,
+                    "amount": 1,
+                    "date": 2,
+                    "receiver": 3,
+                    "ref_no": 4,
+                },
+            },
+        ],
+        "credit": [
+            {
+                "pattern": r".*a\/c no ([\*x\d]+) credited with ([a-z \d\.,]+)--.*\(([\d\- :]+)\).*",
+                "attributes": {
+                    "receiver": 0,
+                    "amount": 1,
+                    "date": 2,
+                },
+            }
+        ],
+    }
+
+    illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + ["will be"]
+    debit_keywords = TransactionSMSDecoder.debit_keywords + ["rtgs transaction"]
+
+
+class AIRBnkTransactionSMSDecoder(TransactionSMSDecoder):
+    illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + ["registering"]
+    debit_keywords = TransactionSMSDecoder.debit_keywords + ["to company"]
+
+    patterns = {
+        "debit": [
+            {
+                "pattern": r".*charge of ([a-z\d\., ]+) .* for .* has been debited from your savings a\/c ([a-z\d]+).*",
+                "attributes": {"amount": 0, "sender": 1},
+            },
+            {
+                "pattern": r"hello! you have successfully deposited \? ([\d\.]+).*txn id # ([a-z\d]+) on ([a-z\d\- :]+)\..*",
+                "attributes": {"amount": 0, "ref_no": 1, "date": 2},
+            },
+        ],
+    }
+
+
+class UnionbTransactionSMSDecoder(TransactionSMSDecoder):
+    illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + ["otp"]
+    patterns = {
+        "credit": [
+            {
+                "pattern": r".*a\/c ([\*x\d]+) credited for ([a-z\d:,\. ]+) on ([\d\- :]+) .* ref no ([\d]+).*",
+                "attributes": {"receiver": 0, "amount": 1, "date": 2, "ref_no": 3},
+            },
+            {
+                "pattern": r".*a\/c ([\*x\d]+).* credited for ([a-z\d:,\. ]+) on ([\d\- :]+).*",
+                "attributes": {"receiver": 0, "amount": 1, "date": 2},
+            },
+        ],
+        "debit": [
+            {
+                "pattern": r".*a\/c ([\*x\d]+) debited for ([a-z\d:,\. ]+) on ([\d\- :]+) by .* ref no ([\d]+).*",
+                "attributes": {"sender": 0, "amount": 1, "date": 2, "ref_no": 3},
+            },
+            {
+                "pattern": r".*a\/c ([\*x\d]+) debited for ([a-z\d:,\. ]+) on ([\d\- :]+).*",
+                "attributes": {"sender": 0, "amount": 1, "date": 2},
+            },
+            {
+                "pattern": r".*a\/c no. ([\*x\d]+) is debited for ([a-z\d:,\. ]+) on ([\d\- :,a-z]+) \(upi ref no ([\d]+)\).*",
+                "attributes": {"sender": 0, "amount": 1, "date": 2, "ref_no": 3},
+            },
+        ],
+    }
 
 
 decoders: Dict[str, TransactionSMSDecoder] = {
@@ -589,6 +683,8 @@ decoders: Dict[str, TransactionSMSDecoder] = {
     "hdfcli": HDFCLITransactionSMSDecoder(),
     "sbiotp": SBIOtpTransactionSMSDecoder(),
     "psbank": PSBankTransactionSMSDecoder(),
+    "airbnk": AIRBnkTransactionSMSDecoder(),
+    "unionb": UnionbTransactionSMSDecoder(),
 }
 
 
