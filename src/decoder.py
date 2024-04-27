@@ -481,17 +481,17 @@ class SBIUpiTransactionSMSDecoder(TransactionSMSDecoder):
     patterns = {
         "debit": [
             {
-                "pattern": r"([a-z\d\., ]+) debited(@|!)sbi upi frm a\/c ?([x\d]+) on ([a-z\d]+) refno ([\d]+)\..*",
+                "pattern": r"([a-z\d\., ]+) debited(@|!)sbi upi frm a\/c ?([x\d]+) on ([a-z\d]+) ref no ([\d]+)\..*",
                 "attributes": {"amount": 0, "sender": 2, "date": 3, "ref_no": 4},
             },
             {
-                "pattern": r"dear sbi user, your a\/c ([x\d]+) ?- ?debited by ([a-z\d\., ]+) on ([a-z\d]+) transfer to ([a-z\d\W ]+) ref no ([\d]+)\..*",
+                "pattern": r".*a\/c ([x\d]+).*debited by ([a-z\d\., ]+) on( date)? ([a-z\d]+) transfer to ([a-z\d\W ]+) ref no ([\d]+)\..*",
                 "attributes": {
                     "sender": 0,
                     "amount": 1,
-                    "date": 2,
-                    "receiver": 3,
-                    "ref_no": 4,
+                    "date": 3,
+                    "receiver": 4,
+                    "ref_no": 5,
                 },
             },
         ],
@@ -535,11 +535,17 @@ class CBSSBITransactionSMSDecoder(TransactionSMSDecoder):
             {
                 "pattern": r"your a\/?c ([x\d]+) debited ([a-z\d\., ]+) on ([\d\/]+).*",
                 "attributes": {"sender": 0, "amount": 1, "date": 2},
-            }
+            },
+            {
+                "pattern": r".*a\/c ([x\d]+) has a debit by (.+) of ([a-z\d,\. ]+) on ([\d\/]+)\..*",
+                "attributes": {"sender": 0, "receiver": 1, "amount": 2, "date": 3},
+            },
         ],
     }
 
     illegal_tnx_keywords = TransactionSMSDecoder.illegal_tnx_keywords + ["request"]
+    legal_tnx_keywords = TransactionSMSDecoder.legal_tnx_keywords + ["debit"]
+    debit_keywords = TransactionSMSDecoder.debit_keywords + ["debit"]
 
 
 class HDFCLITransactionSMSDecoder(TransactionSMSDecoder):
@@ -556,6 +562,10 @@ class HDFCLITransactionSMSDecoder(TransactionSMSDecoder):
 
 
 class SBIOtpTransactionSMSDecoder(TransactionSMSDecoder):
+    pass
+
+
+class PSBankTransactionSMSDecoder(TransactionSMSDecoder):
     pass
 
 
@@ -578,6 +588,7 @@ decoders: Dict[str, TransactionSMSDecoder] = {
     "cbssbi": CBSSBITransactionSMSDecoder(),
     "hdfcli": HDFCLITransactionSMSDecoder(),
     "sbiotp": SBIOtpTransactionSMSDecoder(),
+    "psbank": PSBankTransactionSMSDecoder(),
 }
 
 
@@ -625,7 +636,13 @@ def decode_smses(smses: List[SMS]):
 
 
 def preprocess(s: str) -> str:
-    return s.lower().replace("\n", " ").replace(" ur ", " your ")
+    return (
+        s.lower()
+        .replace("\n", " ")
+        .replace(" ur ", " your ")
+        .replace(" trf ", " transfer ")
+        .replace(" refno ", " ref no ")
+    )
 
 
 def main():
